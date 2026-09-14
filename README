@@ -1,0 +1,51 @@
+Bootstrapping
+
+In this context, bootstrapping means escaping from a circular build dependency:
+building gcc requires the runtime, but building the runtime requires gcc.
+
+The solution is to fake things to enable us to build just enough gcc to build
+the runtime
+
+
+Build order when boostrapping:
+
+0. cygwin-filesystem (bootstrap=1)
+
+1. cygwin-binutils
+
+2. cygwin-filesystem (bootstrap=0)
+   (this package now acquires a dependency on cygwin-binutils-generic so its
+   macros can strip binaries etc.)
+
+3. cygwin-w32api-headers
+   (this just installs files)
+
+&  cygwin-bootstrap-headers
+   (this just installs files)
+
+   this provides the mininmal runtime headers needed by <windows.h>, so we can
+   compile minimal gcc and then w32api-runtime
+
+   it also provides a stub <new> header which is need to compile cygwin
+
+4. cygwin-gcc (bootstrap=1)
+
+5. cygwin-w32api-runtime
+
+&  cygwin-default-manifest
+   (bootstrap mode of this package seems questionable: it only needs
+   target-windres and a cpp (but maybe the target-cpp)) (this package is needed
+   to for building executables with the target compiler)
+
+6. cygwin
+   (this package contains the runtime library and headers, without any of the
+   auxiliary programs or utilities etc., which aren't needed for
+   cross-compiling)
+
+7. cygwin-gcc (bootstrap=0)
+
+
+now you have a working cross toolchain, you can build a target version of libbfd
+(and it's dependencies: getttext, libiconv and zlib)
+
+then you can cross-build a full cygwin package, with all utils etc.
